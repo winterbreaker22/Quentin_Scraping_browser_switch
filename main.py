@@ -2,7 +2,9 @@ import asyncio
 import os
 import pandas as pd
 import time
+from datetime import datetime, timedelta
 from playwright.async_api import async_playwright
+from dateutil.relativedelta import relativedelta
 
 search_url = 'https://bexar.tx.publicsearch.us/'
 db_url = 'https://bexar.trueautomation.com/clientdb/?cid=110'
@@ -37,6 +39,15 @@ async def run(playwright):
     await page.keyboard.press("End")
     time.sleep(2)
 
+    today = datetime.today()
+    one_month_ago = today - relativedelta(months=1)
+    today_str = today.strftime('%m/%d/%y')
+    one_month_ago_str = one_month_ago.strftime('%m/%d/%y')
+    await page.fill('#recordedDateRange', one_month_ago_str)
+    time.sleep(2)
+    await page.fill('input[aria-label="end date"]', today_str)
+    time.sleep(2)
+
     for doc_type in doc_types:
         await page.fill('input#docTypes-input', doc_type['name'])
         await page.click(f'div.tokenized-nested-select__dropdown label[for="docTypes-item-{str(doc_type['count'])}"]')
@@ -51,7 +62,7 @@ async def run(playwright):
 
 
 
-    
+
     # Wait for table to load
     await page.wait_for_selector('table#data-table')  # Replace with the table's selector
 
