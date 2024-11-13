@@ -7,7 +7,7 @@ from playwright.async_api import async_playwright
 search_url = 'https://bexar.tx.publicsearch.us/'
 db_url = 'https://bexar.trueautomation.com/clientdb/?cid=110'
 
-doc_types = [9, 29, 37, 47, 49, 50, 51, ]
+doc_types = [29, 37, 47, 49, 50, 51, 55, 56, 60, 61, 77, 116]
 
 async def run(playwright):
     csv_file = 'scraped_data.csv'
@@ -20,14 +20,23 @@ async def run(playwright):
 
     await page.click('article#main-content >> text="Advanced Search"')  # Replace with the correct selector, if needed
     await page.keyboard.press("End")
-    time.sleep(5)
+    time.sleep(2)
 
     await page.click('input#docTypes-input')
     await page.click('div.tokenized-nested-select__dropdown #docTypes-item-0')
-    await page.click('div.tokenized-nested-select__dropdown label[for="docTypes-item-1"] input')
+    await page.click('div.tokenized-nested-select__dropdown label[for="docTypes-item-1"]')
+    await page.click('input#docTypes-input')
     await page.click('div.tokenized-nested-select__dropdown #docTypes-item-6')
+    await page.click(f'div.tokenized-nested-select__dropdown label[for="docTypes-item-9"]')
 
+    for doc_type in doc_types:
+        await page.click('input#docTypes-input')
+        element_selector = f'div.tokenized-nested-select__dropdown label[for="docTypes-item-{str(doc_type)}"]'
+        element = page.locator(element_selector)
+        await element.scroll_into_view_if_needed()
+        await element.click()
 
+    time.sleep(10)
     # Wait for table to load
     await page.wait_for_selector('table#data-table')  # Replace with the table's selector
 
