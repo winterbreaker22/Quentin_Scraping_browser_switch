@@ -1,22 +1,32 @@
 import asyncio
 import os
 import pandas as pd
+import time
 from playwright.async_api import async_playwright
 
+search_url = 'https://bexar.tx.publicsearch.us/'
+db_url = 'https://bexar.trueautomation.com/clientdb/?cid=110'
+
+doc_types = [9, 29, 37, 47, 49, 50, 51, ]
+
 async def run(playwright):
-    # Define the path to the CSV file
     csv_file = 'scraped_data.csv'
     
-    # Launch the browser
-    browser = await playwright.chromium.launch(headless=True)
-    page = await browser.new_page()
+    browser = await playwright.chromium.launch(headless=False, args=['--start-maximized'])
+    page = await browser.new_page(no_viewport=True) 
 
-    # Go to the target URL
-    url = "https://example.com"  # Replace with the target URL
-    await page.goto(url)
+    await page.goto(search_url)
+    time.sleep(5)
 
-    # Example: Click a button to load the table, if necessary
-    await page.click('button#load-table')  # Replace with the correct selector, if needed
+    await page.click('article#main-content >> text="Advanced Search"')  # Replace with the correct selector, if needed
+    await page.keyboard.press("End")
+    time.sleep(5)
+
+    await page.click('input#docTypes-input')
+    await page.click('div.tokenized-nested-select__dropdown #docTypes-item-0')
+    await page.click('div.tokenized-nested-select__dropdown label[for="docTypes-item-1"] input')
+    await page.click('div.tokenized-nested-select__dropdown #docTypes-item-6')
+
 
     # Wait for table to load
     await page.wait_for_selector('table#data-table')  # Replace with the table's selector
@@ -49,6 +59,5 @@ async def main():
     async with async_playwright() as playwright:
         await run(playwright)
 
-# Run the script
 if __name__ == "__main__":
     asyncio.run(main())
