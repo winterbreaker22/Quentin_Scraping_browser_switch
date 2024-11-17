@@ -2,6 +2,7 @@ import asyncio
 import os
 import pandas as pd
 import time
+import re
 from datetime import datetime, timedelta
 from playwright.async_api import async_playwright
 from dateutil.relativedelta import relativedelta
@@ -26,8 +27,11 @@ doc_types = [
     { 'name': 'WILL & TESTAMENT', 'count': 1 },
 ]
 
+property_address = ''
+detail_search = False
+
 async def run_search_thread(playwright):
-    csv_file = 'scraped_data.csv'
+    global property_address
     
     browser = await playwright.chromium.launch(headless=False, args=['--start-maximized'])
     page = await browser.new_page(no_viewport=True) 
@@ -60,9 +64,16 @@ async def run_search_thread(playwright):
     file_exists = os.path.isfile(csv_file)
 
     for i in range(row_count):
-        property_address = await rows.nth(i).locator('td.col-14 span').text_content()
-        print (property_address)
-        
+        address = await rows.nth(i).locator('td.col-14 span').text_content()
+        if address == 'N/A':
+            detail_search = False
+            continue 
+        pieces = re.split(r'[,\s]+', address)
+        if len(pieces) < 3:
+            detail_search = False
+            continue 
+        property_address = ' '.join(pieces[:3])
+        detail_search = True
         # Extract text from each cell in the row
         # row_data = [await cell.inner_text() for cell in cells]
 
@@ -73,9 +84,6 @@ async def run_search_thread(playwright):
         # row_df.to_csv(csv_file, mode='a', header=not file_exists, index=False)
         # file_exists = True  # After first row, set file_exists to True to skip headers in future rows
 
-    print("Data has been updated in scraped_data.csv")
-
-    # Close the browser
     await browser.close()
 
 async def run_db_thread(playwright):
