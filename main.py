@@ -75,6 +75,7 @@ async def run_search_thread(playwright):
                     continue 
                 property_address_for_search = ' '.join(pieces[:3])
                 detail_search = True
+        await asyncio.sleep(1)
 
     await browser.close()
 
@@ -146,6 +147,9 @@ async def run_db_thread(playwright):
 
                 await page.click('#header_PropertySearch')
                 detail_search = False
+        await asyncio.sleep(1)
+
+    await browser.close()
 
 async def main():
     async with async_playwright() as playwright:
