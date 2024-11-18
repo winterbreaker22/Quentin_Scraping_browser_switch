@@ -86,9 +86,6 @@ async def run_search_thread(playwright):
 
     HWND_SEARCH = ctypes.windll.user32.GetForegroundWindow()
     PID = get_pid_from_window_handle(HWND_SEARCH)
-    print ("Search Thread: ")
-    print (HWND_SEARCH)
-    print (PID)
 
     while True:
         if not detail_search:
@@ -155,13 +152,11 @@ async def run_db_thread(playwright):
     )
     page = await browser.new_page(no_viewport=True) 
     await page.goto(db_url)
-    await asyncio.sleep(5)
 
     HWND_DB = ctypes.windll.user32.GetForegroundWindow()
     PID = get_pid_from_window_handle(HWND_DB)
-    print ("DB Thread: ")
-    print (HWND_DB)
-    print (PID)
+
+    await asyncio.sleep(5)
     
     while True:
         if detail_search:
@@ -222,13 +217,13 @@ async def run_switch_thread(playwright):
     global HWND_SEARCH
 
     await asyncio.sleep(25)
-    print ("Swith Thread: ")
-    print (PID)
 
-    window_search = get_windows_with_pid_and_hwnd(PID, HWND_SEARCH)
-    window_db = get_windows_with_pid_and_hwnd(PID, HWND_DB)
-    print (window_search)
-    print (window_db)
+    while True:
+        if detail_search:
+            ctypes.windll.user32.SetForegroundWindow(HWND_DB)
+        else:
+            ctypes.windll.user32.SetForegroundWindow(HWND_SEARCH)
+        await asyncio.sleep(1)
 
 async def main():
     async with async_playwright() as playwright:
