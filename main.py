@@ -189,8 +189,6 @@ async def run_db_thread(playwright):
                     await asyncio.sleep(3)
 
                     owner = page.locator('table tbody tr') 
-
-                    # Name
                     full_name = await owner.nth(16).locator('td:nth-of-type(2)').text_content()
                     parts = full_name.split()
                     if len(parts) == 3:
