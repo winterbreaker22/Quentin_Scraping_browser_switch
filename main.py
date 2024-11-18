@@ -7,6 +7,11 @@ from playwright.async_api import async_playwright
 from dateutil.relativedelta import relativedelta
 import pygetwindow as gw
 import psutil
+import ctypes
+from ctypes import wintypes
+
+user32 = ctypes.windll.user32
+kernel32 = ctypes.windll.kernel32
 
 search_url = 'https://bexar.tx.publicsearch.us/'
 db_url = 'https://bexar.trueautomation.com/clientdb/?cid=110'
@@ -30,41 +35,60 @@ doc_types = [
 
 property_address_for_search = ''
 detail_search = False
-pid = 0
+PID = 0
+HWND_SEARCH = 0
+HWND_DB = 0
 
-def get_windows_with_pid(pid):
-    """
-    Find all windows that belong to a specific process (by PID).
-    """
-    # Get the list of all windows
-    all_windows = gw.getWindowsWithTitle("")
+def get_windows_with_pid_and_hwnd(pid, target_hwnd):
+    windows = gw.getWindowsWithTitle('')
+    windows_with_pid_and_hwnd = []
     
-    # List to store windows that match the given PID
-    windows_with_pid = []
-
-    for window in all_windows:
+    for window in windows:
         try:
-            # Get the process ID for the window (if possible)
-            window_pid = window._pid
-            if window_pid == pid:
-                windows_with_pid.append(window)
-        except AttributeError:
-            # If the window object doesn't have a PID, skip it
-            continue
+            # Get the process ID for each window
+            process_id = None
+            for proc in psutil.process_iter(['pid', 'name']):
+                if proc.info['pid'] == pid:
+                    process_id = proc.info['pid']
+                    break
+            
+            # Check if the window belongs to the specified process and matches the target hwnd
+            if process_id == pid and window._hWnd == target_hwnd:
+                windows_with_pid_and_hwnd.append(window)
+        
+        except Exception as e:
+            print(f"Error retrieving window information: {e}")
+    
+    return windows_with_pid_and_hwnd
 
-    return windows_with_pid
+def get_pid_from_window_handle(window_handle):
+    pid = wintypes.DWORD() 
+    user32.GetWindowThreadProcessId(window_handle, ctypes.byref(pid))
+    return pid.value
 
 async def run_search_thread(playwright):
     global detail_search
     global property_address_for_search
-    global pid
+    global PID
+    global HWND_SEARCH
     
     await asyncio.sleep(5)
-    browser = await playwright.chromium.launch(headless=False, args=['--start-maximized'])
+    browser = await playwright.chromium.launch(
+        headless=False, 
+        args=[
+            "--start-maximized",
+            "--remote-debugging-port=9222",
+        ],
+    )
     page = await browser.new_page(no_viewport=True) 
     await page.goto(search_url)
     await asyncio.sleep(5)
-    pid = os.getpid()
+
+    HWND_SEARCH = ctypes.windll.user32.GetForegroundWindow()
+    PID = get_pid_from_window_handle(HWND_SEARCH)
+    print ("Search Thread: ")
+    print (HWND_SEARCH)
+    print (PID)
 
     while True:
         if not detail_search:
@@ -109,6 +133,8 @@ async def run_search_thread(playwright):
 async def run_db_thread(playwright):
     global detail_search
     global property_address_for_search
+    global PID
+    global HWND_DB
     
     csv_file = 'info.csv'
     headers = ["First Name", "Last Name", "Mailing Address", "Mailing City", "Mailing State", "Mailing Zip",
@@ -120,11 +146,23 @@ async def run_db_thread(playwright):
         if not file_exists:
             writer.writerow(headers)
             
-    browser = await playwright.chromium.launch(headless=False, args=['--start-maximized'])
+    browser = await playwright.chromium.launch(
+        headless=False, 
+        args=[
+            "--start-maximized",
+            "--remote-debugging-port=9223",
+        ],
+    )
     page = await browser.new_page(no_viewport=True) 
     await page.goto(db_url)
     await asyncio.sleep(5)
 
+    HWND_DB = ctypes.windll.user32.GetForegroundWindow()
+    PID = get_pid_from_window_handle(HWND_DB)
+    print ("DB Thread: ")
+    print (HWND_DB)
+    print (PID)
+    
     while True:
         if detail_search:
             await page.bring_to_front()
@@ -179,14 +217,18 @@ async def run_db_thread(playwright):
 
 async def run_switch_thread(playwright):
     global detail_search
-    global pid
+    global PID
+    global HWND_DB
+    global HWND_SEARCH
 
-    await asyncio.sleep(30)
-    print (pid)
+    await asyncio.sleep(25)
+    print ("Swith Thread: ")
+    print (PID)
 
-    windows = get_windows_with_pid(pid)
-    # print (windows)
-
+    window_search = get_windows_with_pid_and_hwnd(PID, HWND_SEARCH)
+    window_db = get_windows_with_pid_and_hwnd(PID, HWND_DB)
+    print (window_search)
+    print (window_db)
 
 async def main():
     async with async_playwright() as playwright:
