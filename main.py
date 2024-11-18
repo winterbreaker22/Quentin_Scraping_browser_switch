@@ -185,7 +185,7 @@ async def run_switch_thread(playwright):
     print (pid)
 
     windows = get_windows_with_pid(pid)
-    print (windows)
+    # print (windows)
 
 
 async def main():
