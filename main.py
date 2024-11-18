@@ -30,20 +30,19 @@ doc_types = [
 
 property_address_for_search = ''
 detail_search = False
+pid = 0
 
 async def run_search_thread(playwright):
     global detail_search
     global property_address_for_search
+    global pid
     
     browser = await playwright.chromium.launch(headless=False, args=['--start-maximized'])
     page = await browser.new_page(no_viewport=True) 
     await page.goto(search_url)
     await asyncio.sleep(5)
-    print (os.getpid())
-    parent_proc = psutil.Process(os.getpid())
-    print (parent_proc)
-    children = parent_proc.children()
-    print (children)
+    pid = os.getpid()
+    print (pid)
 
     while True:
         if not detail_search:
@@ -98,14 +97,11 @@ async def run_db_thread(playwright):
         writer = csv.writer(file)
         if not file_exists:
             writer.writerow(headers)
-
+            
     browser = await playwright.chromium.launch(headless=False, args=['--start-maximized'])
     page = await browser.new_page(no_viewport=True) 
     await page.goto(db_url)
     await asyncio.sleep(5)
-    print (os.getpid())
-    parent_proc = psutil.Process(os.getpid())
-    print (parent_proc)
 
     while True:
         if detail_search:
@@ -159,11 +155,23 @@ async def run_db_thread(playwright):
 
     await browser.close()
 
+async def run_switch_thread(playwright):
+    global detail_search
+    global pid
+
+    await asyncio.sleep(20)
+    print (pid)
+
+    windows = gw.getAllWindows()
+    print (windows)
+
+
 async def main():
     async with async_playwright() as playwright:
         task_search = asyncio.create_task(run_search_thread(playwright))
         task_db = asyncio.create_task(run_db_thread(playwright))
-        await asyncio.gather(task_db, task_search)
+        task_switch = asyncio.create_task(run_switch_thread(playwright))
+        await asyncio.gather(task_db, task_search, task_switch)
 
 if __name__ == "__main__":
     asyncio.run(main())
