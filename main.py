@@ -89,8 +89,6 @@ async def run_search_thread(playwright):
 
     while True:
         if not detail_search:
-            await page.bring_to_front()
-
             await page.click('article#main-content >> text="Advanced Search"')  # Replace with the correct selector, if needed
             await page.keyboard.press("End")
             await asyncio.sleep(2)
@@ -133,16 +131,6 @@ async def run_db_thread(playwright):
     global PID
     global HWND_DB
     
-    csv_file = 'info.csv'
-    headers = ["First Name", "Last Name", "Mailing Address", "Mailing City", "Mailing State", "Mailing Zip",
-               "Property Address", "Property City", "Property State", "Property Zip"]
-
-    file_exists = os.path.exists(csv_file)
-    with open(csv_file, mode='a', newline='') as file:
-        writer = csv.writer(file)
-        if not file_exists:
-            writer.writerow(headers)
-            
     browser = await playwright.chromium.launch(
         headless=False, 
         args=[
@@ -158,10 +146,18 @@ async def run_db_thread(playwright):
 
     await asyncio.sleep(5)
     
+    csv_file = 'info.csv'
+    headers = ["First Name", "Last Name", "Mailing Address", "Mailing City", "Mailing State", "Mailing Zip",
+               "Property Address", "Property City", "Property State", "Property Zip"]
+
+    file_exists = os.path.exists(csv_file)
+    with open(csv_file, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        if not file_exists:
+            writer.writerow(headers)
+    
     while True:
         if detail_search:
-            await page.bring_to_front()
-
             await page.fill('#propertySearchOptions_searchText', property_address_for_search)
             await page.click('#propertySearchOptions_search')
             await asyncio.sleep(5)
