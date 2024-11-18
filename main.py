@@ -5,6 +5,8 @@ import csv
 from datetime import datetime, timedelta
 from playwright.async_api import async_playwright
 from dateutil.relativedelta import relativedelta
+import pygetwindow as gw
+import psutil
 
 search_url = 'https://bexar.tx.publicsearch.us/'
 db_url = 'https://bexar.trueautomation.com/clientdb/?cid=110'
@@ -35,9 +37,13 @@ async def run_search_thread(playwright):
     
     browser = await playwright.chromium.launch(headless=False, args=['--start-maximized'])
     page = await browser.new_page(no_viewport=True) 
-
     await page.goto(search_url)
     await asyncio.sleep(5)
+    print (os.getpid())
+    parent_proc = psutil.Process(os.getpid())
+    print (parent_proc)
+    children = parent_proc.children()
+    print (children)
 
     while True:
         if not detail_search:
@@ -95,9 +101,11 @@ async def run_db_thread(playwright):
 
     browser = await playwright.chromium.launch(headless=False, args=['--start-maximized'])
     page = await browser.new_page(no_viewport=True) 
-
     await page.goto(db_url)
     await asyncio.sleep(5)
+    print (os.getpid())
+    parent_proc = psutil.Process(os.getpid())
+    print (parent_proc)
 
     while True:
         if detail_search:
