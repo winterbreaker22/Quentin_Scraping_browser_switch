@@ -111,9 +111,7 @@ async def run_search_thread(playwright):
             row_count = await rows.count()
 
             for i in range(row_count):
-                address_element = rows.nth(i).locator('td.col-14 span')
-                await address_element.scroll_into_view_if_needed()
-                address = address_element.text_content()
+                address = await rows.nth(i).locator('td.col-14 span').text_content()
                 if address == 'N/A':
                     detail_search = False
                     continue 
