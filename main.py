@@ -72,7 +72,7 @@ async def run_search_thread(playwright):
     global PID
     global HWND_SEARCH
     
-    await asyncio.sleep(5)
+    await asyncio.sleep(10)
     browser = await playwright.chromium.launch(
         headless=False, 
         args=[
@@ -111,7 +111,9 @@ async def run_search_thread(playwright):
             row_count = await rows.count()
 
             for i in range(row_count):
-                address = await rows.nth(i).locator('td.col-14 span').text_content()
+                address_element = rows.nth(i).locator('td.col-14 span')
+                await address_element.scroll_into_view_if_needed()
+                address = address_element.text_content()
                 if address == 'N/A':
                     detail_search = False
                     continue 
@@ -164,7 +166,7 @@ async def run_db_thread(playwright):
 
             rows = page.locator('#propertySearchResults_resultsTable tbody tr')  
             row_count = await rows.count()
-            if row_count > 3:
+            if row_count > 2:
                 for i in range(row_count - 2):
                     await rows.nth(i + 1).locator('td:nth-last-of-type(2) a').click()   
                     await asyncio.sleep(3)
@@ -172,7 +174,7 @@ async def run_db_thread(playwright):
                     owner = page.locator('table tbody tr') 
 
                     # Name
-                    full_name = await rows.nth(16).locator('td:nth-of-type(2)').text_content()
+                    full_name = await owner.nth(16).locator('td:nth-of-type(2)').text_content()
                     parts = full_name.split()
                     if len(parts) == 3:
                         first_name, middle_name, last_name = parts
@@ -181,7 +183,7 @@ async def run_db_thread(playwright):
                         middle_name = ''
 
                     # Mailing address
-                    mailing_address_full = await rows.nth(17).locator('td:nth-of-type(2)').text_content()
+                    mailing_address_full = await owner.nth(17).locator('td:nth-of-type(2)').text_content()
                     parts = mailing_address_full.split("<br>")
                     mailing_address = parts[0]
                     mailing_city = parts[-1].split(' ')[0]
@@ -189,7 +191,7 @@ async def run_db_thread(playwright):
                     mailing_zip = parts[-1].split(' ')[-1]
 
                     # Property address
-                    property_address_full = await rows.nth(12).locator('td:nth-of-type(2)').text_content()
+                    property_address_full = await owner.nth(12).locator('td:nth-of-type(2)').text_content()
                     parts = property_address_full.split("<br>")
                     property_address = parts[0]
                     property_city = parts[-1].split(' ')[0]
@@ -212,7 +214,7 @@ async def run_switch_thread(playwright):
     global HWND_DB
     global HWND_SEARCH
 
-    await asyncio.sleep(25)
+    await asyncio.sleep(30)
 
     while True:
         if detail_search:
