@@ -32,17 +32,39 @@ property_address_for_search = ''
 detail_search = False
 pid = 0
 
+def get_windows_with_pid(pid):
+    """
+    Find all windows that belong to a specific process (by PID).
+    """
+    # Get the list of all windows
+    all_windows = gw.getWindowsWithTitle("")
+    
+    # List to store windows that match the given PID
+    windows_with_pid = []
+
+    for window in all_windows:
+        try:
+            # Get the process ID for the window (if possible)
+            window_pid = window._pid
+            if window_pid == pid:
+                windows_with_pid.append(window)
+        except AttributeError:
+            # If the window object doesn't have a PID, skip it
+            continue
+
+    return windows_with_pid
+
 async def run_search_thread(playwright):
     global detail_search
     global property_address_for_search
     global pid
     
+    await asyncio.sleep(5)
     browser = await playwright.chromium.launch(headless=False, args=['--start-maximized'])
     page = await browser.new_page(no_viewport=True) 
     await page.goto(search_url)
     await asyncio.sleep(5)
     pid = os.getpid()
-    print (pid)
 
     while True:
         if not detail_search:
@@ -159,10 +181,10 @@ async def run_switch_thread(playwright):
     global detail_search
     global pid
 
-    await asyncio.sleep(20)
+    await asyncio.sleep(30)
     print (pid)
 
-    windows = gw.getAllWindows()
+    windows = get_windows_with_pid(pid)
     print (windows)
 
 
