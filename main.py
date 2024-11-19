@@ -2,6 +2,7 @@ import asyncio
 import os
 import re
 import csv
+import playwright
 from datetime import datetime, timedelta
 from playwright.async_api import async_playwright
 from dateutil.relativedelta import relativedelta
@@ -114,7 +115,7 @@ async def run_search_thread(playwright):
     total_page_number = int(total) / 50 + 1
     last_page_row_number = int(total) % 50
 
-    search_row_number = 1
+    search_row_number = 0
     search_page_number = 1
     while True:
         if not detail_search:
@@ -126,10 +127,12 @@ async def run_search_thread(playwright):
             property_address_for_search = ' '.join(pieces[:3])
             search_row_number = search_row_number + 1
 
-            last_row_index = last_page_row_number + 1 if search_page_number == total_page_number else 51
+            last_row_index = last_page_row_number if search_page_number == total_page_number else 50
             if search_row_number == last_row_index:
-                search_row_number = 1
+                search_row_number = 0
+                await asyncio.sleep(2)
                 await page.click('nav.Pagination > div > button:last-of-type')
+                await asyncio.sleep(5)
                 if search_page_number != total_page_number:
                     search_page_number = search_page_number + 1
                 else:
@@ -170,10 +173,12 @@ async def run_db_thread(playwright):
                "Property Address", "Property City", "Property State", "Property Zip"]
 
     file_exists = os.path.exists(csv_file)
+    if file_exists:
+        with open(csv_file, 'w') as file:
+            pass
     with open(csv_file, mode='a', newline='') as file:
         writer = csv.writer(file)
-        if not file_exists:
-            writer.writerow(headers)
+        writer.writerow(headers)
     
     while True:
         if detail_search:
@@ -185,38 +190,54 @@ async def run_db_thread(playwright):
             row_count = await rows.count()
             if row_count > 2:
                 for i in range(row_count - 2):
-                    await rows.nth(i + 1).locator('td:nth-last-of-type(2) a').click()   
-                    await asyncio.sleep(3)
+                    view_details = rows.nth(i + 1).locator('td:nth-last-of-type(2) a')
+                    if not view_details:
+                        continue
+                    await view_details.wait_for(state="visible")
+                    await view_details.click()   
+                    await asyncio.sleep(2)
 
                     owner = page.locator('table tbody tr') 
-                    full_name = await owner.nth(16).locator('td:nth-of-type(2)').text_content()
+                    full_name = await owner.nth(15).locator('td:nth-of-type(2)').text_content()
+                    print ("full name: ", full_name)
                     parts = full_name.split()
-                    if len(parts) == 3:
+                    first_name = middle_name = last_name = ''
+                    if len(parts) > 3:
+                        first_name, middle_name, last_name = parts[:3]
+                    elif len(parts) == 3:
                         first_name, middle_name, last_name = parts
                     elif len(parts) == 2:
                         first_name, last_name = parts
                         middle_name = ''
 
                     # Mailing address
-                    mailing_address_full = await owner.nth(17).locator('td:nth-of-type(2)').text_content()
-                    print ("mailing_address: ", mailing_address_full)
-                    parts = mailing_address_full.split("<br>")
-                    mailing_address = parts[0]
-                    mailing_city = parts[-1].split(' ')[0]
-                    mailing_state = parts[-1].split(' ')[1]
-                    mailing_zip = parts[-1].split(' ')[-1]
+                    mailing_address_full = await owner.nth(16).locator('td:nth-of-type(2)').text_content()
+                    parts = mailing_address_full.split('  ')
+                    mailing_address = parts[0] if len(parts) > 0 else ''
+                    sub_parts = parts[-1].strip(',') if len(parts) > 0 else ''
+                    city_state_zip = sub_parts.rsplit(' ', 2)
+                    mailing_city = city_state_zip[0].rstrip(',') if len(city_state_zip) > 0 else ''
+                    mailing_state = city_state_zip[1] if len(city_state_zip) > 0 else ''
+                    mailing_zip = city_state_zip[2] if len(city_state_zip) > 0 else ''
 
                     # Property address
-                    property_address_full = await owner.nth(12).locator('td:nth-of-type(2)').text_content()
-                    parts = property_address_full.split("<br>")
-                    property_address = parts[0]
-                    property_city = parts[-1].split(' ')[0]
-                    property_state = parts[-1].split(' ')[1]
-                    property_zip = parts[-1].split(' ')[-1]
+                    property_address_full = await owner.nth(11).locator('td:nth-of-type(2)').text_content()
+                    parts = property_address_full.split('  ')
+                    property_address = parts[0] if len(parts) > 0 else ''
+                    sub_parts = parts[-1].strip(',') if len(parts) > 0 else ''
+                    city_state_zip = sub_parts.rsplit(' ', 2)
+                    property_city = city_state_zip[0].rstrip(',') if len(city_state_zip) > 0 else ''
+                    property_state = city_state_zip[1] if len(city_state_zip) > 0 else ''
+                    property_zip = city_state_zip[2] if len(city_state_zip) > 0 else ''
 
                     one_row = [first_name, last_name, mailing_address, mailing_city, mailing_state, mailing_zip, 
                                property_address, property_city, property_state, property_zip]
-                    writer.writerow(one_row)
+
+                    with open(csv_file, mode='a', newline='') as file:
+                        writer = csv.writer(file)
+                        writer.writerow(one_row)
+                    await page.go_back()
+                    await asyncio.sleep(2)
 
             await page.click('#header_PropertySearch')
             detail_search = False
