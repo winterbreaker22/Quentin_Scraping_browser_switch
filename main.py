@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from playwright.async_api import async_playwright
 from dateutil.relativedelta import relativedelta
 import pygetwindow as gw
+import pyautogui
 import psutil
 import ctypes
 from ctypes import wintypes
@@ -40,6 +41,7 @@ PID = 0
 HWND_SEARCH = 0
 HWND_DB = 0
 scraping_finished = False
+current_doc_type = ''
 
 def get_windows_with_pid_and_hwnd(pid, target_hwnd):
     windows = gw.getWindowsWithTitle('')
@@ -74,6 +76,7 @@ async def run_search_thread(playwright):
     global PID
     global HWND_SEARCH
     global scraping_finished
+    global current_doc_type
 
     await asyncio.sleep(10)
     browser = await playwright.chromium.launch(
@@ -100,6 +103,8 @@ async def run_search_thread(playwright):
     await page.fill('#recordedDateRange', str(one_month_ago.strftime(f'%m/%d/%Y')))
     await page.fill('div.form-field-inline-datepicker > div:last-of-type input', str(today.strftime(f'%m/%d/%Y')))
     await asyncio.sleep(2)
+    pyautogui.click(x=100, y=100)
+    await asyncio.sleep(2)
 
     for doc_type in doc_types:
         await page.fill('input#docTypes-input', doc_type['name'])
@@ -120,6 +125,7 @@ async def run_search_thread(playwright):
     while True:
         if not detail_search:
             rows = page.locator('table tbody tr')  
+            current_doc_type = await rows.nth(search_row_number).locator('td.col-5 span').text_content()
             address_element = rows.nth(search_row_number).locator('td.col-14 span')
             await address_element.scroll_into_view_if_needed()
             address = await address_element.text_content()
@@ -152,6 +158,7 @@ async def run_db_thread(playwright):
     global PID
     global HWND_DB
     global scraping_finished
+    global current_doc_type
     
     browser = await playwright.chromium.launch(
         headless=False, 
@@ -170,7 +177,7 @@ async def run_db_thread(playwright):
     
     csv_file = 'info.csv'
     headers = ["First Name", "Last Name", "Mailing Address", "Mailing City", "Mailing State", "Mailing Zip",
-               "Property Address", "Property City", "Property State", "Property Zip"]
+               "Property Address", "Property City", "Property State", "Property Zip", "Doc Type", "Exemption"]
 
     file_exists = os.path.exists(csv_file)
     if file_exists:
@@ -229,9 +236,11 @@ async def run_db_thread(playwright):
                     property_city = city_state_zip[0].rstrip(',') if len(city_state_zip) > 0 else ''
                     property_state = city_state_zip[1] if len(city_state_zip) > 0 else ''
                     property_zip = city_state_zip[2] if len(city_state_zip) > 0 else ''
+                    doc_type = current_doc_type
+                    exemption = await owner.nth(17).locator('td:last-of-type').text_content()
 
                     one_row = [first_name, last_name, mailing_address, mailing_city, mailing_state, mailing_zip, 
-                               property_address, property_city, property_state, property_zip]
+                               property_address, property_city, property_state, property_zip, doc_type, exemption]
 
                     with open(csv_file, mode='a', newline='') as file:
                         writer = csv.writer(file)
