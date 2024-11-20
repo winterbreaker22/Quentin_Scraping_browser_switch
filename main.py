@@ -128,9 +128,7 @@ async def run_search_thread(playwright):
             current_doc_type = await rows.nth(search_row_number).locator('td.col-5 span').text_content()
             address_element = rows.nth(search_row_number).locator('td.col-14 span')
             await address_element.scroll_into_view_if_needed()
-            address = await address_element.text_content()
-            pieces = re.split(r'[,\s]+', address)
-            property_address_for_search = ' '.join(pieces[:3])
+            property_address_for_search = await address_element.text_content()
             search_row_number = search_row_number + 1
 
             last_row_index = last_page_row_number if search_page_number == total_page_number else 50
@@ -144,7 +142,7 @@ async def run_search_thread(playwright):
                 else:
                     scraping_finished = True
                     break
-            if len(pieces) < 3:
+            if property_address_for_search == 'N/A':
                 continue 
             
             detail_search = True
@@ -189,8 +187,16 @@ async def run_db_thread(playwright):
     
     while True:
         if detail_search:
-            await page.fill('#propertySearchOptions_searchText', property_address_for_search)
-            await page.click('#propertySearchOptions_search')
+            await page.click('#propertySearchOptions_advanced')
+            await asyncio.sleep(2)
+            address_parts = property_address_for_search.split(',')
+            first_part = address_parts[0].strip()
+            words = first_part.split(' ')
+            street_number = words[0] 
+            street_name = ' '.join(words[1:])
+            await page.fill('#propertySearchOptions_streetNumber', street_number)
+            await page.fill('#propertySearchOptions_streetName', street_name)
+            await page.click('#propertySearchOptions_searchAdv')
             await asyncio.sleep(5)
 
             rows = page.locator('#propertySearchResults_resultsTable tbody tr')  
@@ -216,8 +222,11 @@ async def run_db_thread(playwright):
                     elif len(parts) == 2:
                         first_name, last_name = parts
                         middle_name = ''
-
-                    # Mailing address
+                    if first_name == '&':
+                        first_name = ''
+                    if last_name == '&':
+                        last_name = ''
+                        
                     mailing_address_full = await owner.nth(16).locator('td:nth-of-type(2)').text_content()
                     parts = mailing_address_full.split('  ')
                     mailing_address = parts[0] if len(parts) > 0 else ''
