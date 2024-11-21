@@ -233,8 +233,8 @@ async def run_db_thread(playwright):
                     sub_parts = parts[-1].strip(',') if len(parts) > 0 else ''
                     city_state_zip = sub_parts.rsplit(' ', 2)
                     mailing_city = city_state_zip[0].rstrip(',') if len(city_state_zip) > 0 else ''
-                    mailing_state = city_state_zip[1] if len(city_state_zip) > 0 else ''
-                    mailing_zip = city_state_zip[2] if len(city_state_zip) > 0 else ''
+                    mailing_state = city_state_zip[1] if len(city_state_zip) > 1 else ''
+                    mailing_zip = city_state_zip[2] if len(city_state_zip) > 2 else ''
 
                     # Property address
                     property_address_full = await owner.nth(11).locator('td:nth-of-type(2)').text_content()
@@ -243,8 +243,8 @@ async def run_db_thread(playwright):
                     sub_parts = parts[-1].strip(',') if len(parts) > 0 else ''
                     city_state_zip = sub_parts.rsplit(' ', 2)
                     property_city = city_state_zip[0].rstrip(',') if len(city_state_zip) > 0 else ''
-                    property_state = city_state_zip[1] if len(city_state_zip) > 0 else ''
-                    property_zip = city_state_zip[2] if len(city_state_zip) > 0 else ''
+                    property_state = city_state_zip[1] if len(city_state_zip) > 1 else ''
+                    property_zip = city_state_zip[2] if len(city_state_zip) > 2 else ''
                     doc_type = current_doc_type
                     exemption = await owner.nth(17).locator('td:last-of-type').text_content()
 
