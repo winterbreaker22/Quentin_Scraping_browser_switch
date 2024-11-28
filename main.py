@@ -187,6 +187,7 @@ async def run_db_thread(playwright):
     
     while True:
         if detail_search:
+            await page.wait_for_selector("#propertySearchOptions_advanced", state='visible', timeout=5000) 
             await page.click('#propertySearchOptions_advanced')
             await asyncio.sleep(2)
             address_parts = property_address_for_search.split(',')
@@ -257,6 +258,7 @@ async def run_db_thread(playwright):
                     await page.go_back()
                     await asyncio.sleep(2)
 
+            await page.wait_for_selector("#header_PropertySearch", state='visible', timeout=5000) 
             await page.click('#header_PropertySearch')
             detail_search = False
         
