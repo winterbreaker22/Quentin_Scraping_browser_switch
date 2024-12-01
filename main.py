@@ -49,7 +49,6 @@ def get_windows_with_pid_and_hwnd(pid, target_hwnd):
     
     for window in windows:
         try:
-            # Get the process ID for each window
             process_id = None
             for proc in psutil.process_iter(['pid', 'name']):
                 if proc.info['pid'] == pid:
